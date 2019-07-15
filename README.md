@@ -1,5 +1,5 @@
 # pytorch-center-loss
-Pytorch implementation of Hash-Classification model for Image Retrieval.
+Pytorch implementation of Margin Hash for Image Retrieval.
 
 ## Get started
 Clone this repo and run the code
