@@ -1,3 +1,10 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+import math
+
+
 # ArcFace
 class ArcMarginProduct(nn.Module):
     r"""Implement of large margin arc distance: :
@@ -22,20 +29,22 @@ class ArcMarginProduct(nn.Module):
         # net.parameter()中就有这个绑定的parameter，所以在参数优化的时候可以进行优化的
         # https://www.jianshu.com/p/d8b77cc02410
         # 初始化权重
-        self.weight = Parameter(torch.FloatTensor(out_features, in_features))
+        self.weight = nn.Parameter(torch.FloatTensor(out_features, in_features))
         nn.init.xavier_uniform_(self.weight)
 
         self.easy_margin = easy_margin
         self.cos_m = math.cos(m)
         self.sin_m = math.sin(m)
+
+        # make the function cos(theta+m) monotonic decreasing while theta in [0°,180°]
         self.th = math.cos(math.pi - m)
         self.mm = math.sin(math.pi - m) * m
 
-    def forward(self, input, label):
+    def forward(self, x, label):
         # --------------------------- cos(theta) & phi(theta) ---------------------------
         # torch.nn.functional.linear(input, weight, bias=None)
         # y=x*W^T+b
-        cosine = F.linear(F.normalize(input), F.normalize(self.weight))
+        cosine = F.linear(F.normalize(x), F.normalize(self.weight))
         sine = torch.sqrt(1.0 - torch.pow(cosine, 2))
         # cos(a+b)=cos(a)*cos(b)-size(a)*sin(b)
         phi = cosine * self.cos_m - sine * self.sin_m

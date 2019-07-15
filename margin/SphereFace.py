@@ -1,3 +1,10 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+import math
+
+
 # SphereFace
 class SphereProduct(nn.Module):
     r"""Implement of large margin cosine distance: :
@@ -18,7 +25,7 @@ class SphereProduct(nn.Module):
         self.power = 1
         self.LambdaMin = 5.0
         self.iter = 0
-        self.weight = Parameter(torch.FloatTensor(out_features, in_features))
+        self.weight = nn.Parameter(torch.FloatTensor(out_features, in_features))
         nn.init.xavier_uniform(self.weight)
 
         # duplication formula
@@ -60,7 +67,7 @@ class SphereProduct(nn.Module):
         cos_theta = cos_theta.clamp(-1, 1)
         cos_m_theta = self.mlambda[self.m](cos_theta)
         theta = cos_theta.data.acos()
-        k = (self.m * theta / 3.14159265).floor()
+        k = (self.m * theta / math.pi).floor()
         phi_theta = ((-1.0) ** k) * cos_m_theta - 2 * k
         NormOfFeature = torch.norm(input, 2, 1)
 

@@ -11,12 +11,11 @@ import datasets
 from utils import *
 
 
-parser = argparse.ArgumentParser("Center Loss")
-parser.add_argument('-d', '--dataset', type=str, default='cifar-s1')
+parser = argparse.ArgumentParser("Hash Test")
+parser.add_argument('--dataset', type=str, default='cifar-s1')
 parser.add_argument('--batch-size', type=int, default=128)
-parser.add_argument('--gpu', type=str, default='0')
-parser.add_argument('--save-dir', type=str, default='./snapshot/Hash/cifar-s1')
-parser.add_argument('--prefix', type=str, default='q0.01')
+parser.add_argument('--gpus', type=str, default='0')
+parser.add_argument('--save-dir', type=str, default='./snapshot/Hash/cifar-s1/debug')
 parser.add_argument('--tencrop', action='store_true')
 
 args = parser.parse_args()
@@ -24,75 +23,49 @@ print(args)
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu
-    use_gpu = torch.cuda.is_available()
-
-    if use_gpu:
-        print("Currently using GPU: {}".format(args.gpu))
+    os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
+    multi_gpus = False
+    if len(args.gpus.split(',')) > 1:
+        multi_gpus = True
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if device.type == 'cuda':
+        print("Currently using GPU: {}".format(args.gpus))
         cudnn.benchmark = True
 
     print("Creating dataset: {}".format(args.dataset))
-    dataset = datasets.CIFARS1(args.batch_size, use_gpu, num_workers=4, tencrop=args.tencrop)
+    dataset = datasets.CIFARS1(args.batch_size, tencrop=args.tencrop)
     testloader, databaseloader = dataset.testloader, dataset.databaseloader
 
-    print("load pretrained model: {}".format(args.prefix))
-    model_path = osp.join(osp.join(args.save_dir, args.prefix), 'model_best_mAP.pth')
+    print("load pretrained model: {}".format(args.save_dir))
+    model_path = osp.join(args.save_dir, 'model_best.pth')
     model = torch.load(model_path)
-
-    if use_gpu:
-        model = nn.DataParallel(model).cuda()
-
-    print("==> Test")
-    acc = test(model, testloader, args.tencrop, use_gpu)
-    print(f'acc:{acc}')
+    if multi_gpus:
+        model = nn.DataParallel(model).to(device)
+    else:
+        model = model.to(device)
 
     print("==> Evaluate")
-    mAP_feat, mAP_sign, _ = evaluate(model, databaseloader, testloader, dataset.R, args.tencrop, use_gpu)
+    mAP_feat, mAP_sign, _ = evaluate(model, databaseloader, testloader, dataset.R, args.tencrop, device)
     print(f'mAP_feat:{mAP_feat:.4f}  mAP_sign:{mAP_sign:.4f}')
 
 
-def test(model, testloader, tencrop, use_gpu):
-    model.eval()
-    correct, total = 0, 0
-    
-    with torch.no_grad():
-        for data, labels in testloader:
-            if use_gpu:
-                data, labels = data.cuda(), labels.cuda()
-
-            if tencrop:
-                bs, ncrops, c, h, w = data.size()
-                _, outputs = model(data.view(-1, c, h, w))
-                outputs = outputs.view(bs, ncrops, -1).mean(1)
-            else:
-                _, outputs = model(data)
-            
-            predictions = outputs.data.max(1)[1]
-            total += labels.size(0)
-            correct += (predictions == labels.data).sum()
-
-    acc = correct * 100. / total
-    return acc
-
-
-def evaluate(model, dbloader, testloader, R, tencrop, use_gpu):
+def evaluate(model, databaseloder, testloader, R, tencrop, device):
     model.eval()
 
     print('calculate database codes...')
     db_feats = []
     db_labels = []
     with torch.no_grad():
-        for data, labels in dbloader:
-            if use_gpu:
-                data, labels = data.cuda(), labels.cuda()
+        for data, labels in databaseloder:
+            data, labels = data.to(device), labels.to(device)
 
             if tencrop:
                 bs, ncrops, c, h, w = data.size()
-                feats, _ = model(data.view(-1, c, h, w))
+                feats = model(data.view(-1, c, h, w))
                 feats = feats.view(bs, ncrops, -1).mean(1)
             else:
-                feats, _ = model(data)
-            
+                feats = model(data)[0]
+
             db_feats.append(feats.data.cpu().numpy())
             db_labels.append(labels.data.cpu().numpy())
     db_feats = np.concatenate(db_feats, 0)
@@ -105,15 +78,14 @@ def evaluate(model, dbloader, testloader, R, tencrop, use_gpu):
     test_labels = []
     with torch.no_grad():
         for data, labels in testloader:
-            if use_gpu:
-                data, labels = data.cuda(), labels.cuda()
+            data, labels = data.to(device), labels.to(device)
 
             if tencrop:
                 bs, ncrops, c, h, w = data.size()
-                feats, _ = model(data.view(-1, c, h, w))
+                feats = model(data.view(-1, c, h, w))
                 feats = feats.view(bs, ncrops, -1).mean(1)
             else:
-                feats, _ = model(data)
+                feats = model(data)[0]
 
             test_feats.append(feats.data.cpu().numpy())
             test_labels.append(labels.data.cpu().numpy())

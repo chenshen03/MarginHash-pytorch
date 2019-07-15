@@ -1,7 +1,7 @@
 import math
 import torch
 import torch.nn as nn
-import torch.nn.functional as func
+import torch.nn.functional as F
 
 
 class Bottleneck(nn.Module):
@@ -13,8 +13,8 @@ class Bottleneck(nn.Module):
         self.conv2 = nn.Conv2d(4 * growth_rate, growth_rate, kernel_size=3, padding=1, bias=False)
 
     def forward(self, x):
-        y = self.conv1(func.relu(self.bn1(x)))
-        y = self.conv2(func.relu(self.bn2(y)))
+        y = self.conv1(F.relu(self.bn1(x)))
+        y = self.conv2(F.relu(self.bn2(y)))
         x = torch.cat([y, x], 1)
         return x
 
@@ -26,8 +26,8 @@ class Transition(nn.Module):
         self.conv = nn.Conv2d(in_planes, out_planes, kernel_size=1, bias=False)
 
     def forward(self, x):
-        x = self.conv(func.relu(self.bn(x)))
-        x = func.avg_pool2d(x, 2)
+        x = self.conv(F.relu(self.bn(x)))
+        x = F.avg_pool2d(x, 2)
         return x
 
 
@@ -76,7 +76,7 @@ class DenseNet(nn.Module):
         x = self.trans2(self.dense2(x))
         x = self.trans3(self.dense3(x))
         x = self.dense4(x)
-        x = func.avg_pool2d(func.relu(self.bn(x)), 4)
+        x = F.avg_pool2d(F.relu(self.bn(x)), 4)
         x = x.view(x.size(0), -1)
         x = self.linear(x)
         return x

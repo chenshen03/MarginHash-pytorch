@@ -1,16 +1,16 @@
-from .cifar10 import CIFAR, CIFARS1, CIFARS2
 from .mnist import MNIST
+from .cifar10 import CIFAR, CIFARS1, CIFARS2
 
 
-__factory = {
-    'mnist': MNIST,
-    'cifar': CIFAR,
-    'cifar-s1': CIFARS1,
-    'cifar-s2': CIFARS2,
-}
-
-
-def create(name, batch_size, use_gpu, num_workers):
-    if name not in __factory.keys():
-        raise KeyError("Unknown dataset: {}".format(name))
-    return __factory[name](batch_size, use_gpu, num_workers)
+def create(name, batch_size):
+    if name == 'cifar':
+        dataset = CIFAR(batch_size)
+    elif name == 'cifar-s1':
+        dataset = CIFARS1(batch_size)
+    elif name == 'cifar-s2':
+        dataset = CIFARS2(batch_size)
+    elif name == 'mnist':
+        dataset = MNIST(batch_size)
+    else:
+        raise ValueError(f'dataset {name} is not available!')
+    return dataset

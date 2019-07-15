@@ -1,6 +1,5 @@
 # pytorch-center-loss
 Pytorch implementation of Hash-Classification model for Image Retrieval.
-> Reference: https://github.com/KaiyangZhou/pytorch-center-loss
 
 ## Get started
 Clone this repo and run the code
@@ -58,3 +57,7 @@ Softmax + center loss. Left: training set. Right: test set.
   <img src="assets/center_train.gif" alt="train" width="30%">
   <img src="assets/center_test.gif" alt="train" width="30%">
 </div>
+
+# Reference
+1. [KaiyangZhou/pytorch-center-loss](https://github.com/KaiyangZhou/pytorch-center-loss)
+2. [wujiyang/Face_Pytorch](https://github.com/wujiyang/Face_Pytorch)

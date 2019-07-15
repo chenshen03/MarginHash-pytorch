@@ -9,7 +9,7 @@ from .datalist import ImageDataset
 normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 
 class CIFAR(object):
-    def __init__(self, batch_size, use_gpu, num_workers):
+    def __init__(self, batch_size):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),
@@ -18,13 +18,11 @@ class CIFAR(object):
             normalize
         ])
 
-        pin_memory = True if use_gpu else False
-
         trainset = torchvision.datasets.CIFAR10(root='./data/cifar', train=True, download=True, transform=train_transform)
         
         trainloader = torch.utils.data.DataLoader(
             trainset, batch_size=batch_size, shuffle=True,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
         
         test_transform = transforms.Compose([
@@ -38,7 +36,7 @@ class CIFAR(object):
         
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         self.trainloader = trainloader
@@ -49,9 +47,7 @@ class CIFAR(object):
 
 
 class CIFARS1(object):
-    def __init__(self, batch_size, use_gpu, num_workers, tencrop=False):
-        pin_memory = True if use_gpu else False
-
+    def __init__(self, batch_size, tencrop=False):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),
@@ -62,7 +58,7 @@ class CIFARS1(object):
         trainset = ImageDataset('data/cifar-s1/train.txt', transform=train_transform)
         trainloader = torch.utils.data.DataLoader(
             trainset, batch_size=batch_size, shuffle=True,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         if tencrop:
@@ -82,13 +78,13 @@ class CIFARS1(object):
         testset = ImageDataset('data/cifar-s1/test.txt', transform=test_transform)
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         databaseset = ImageDataset('data/cifar-s1/database.txt', transform=test_transform)
         databaseloader = torch.utils.data.DataLoader(
             databaseset, batch_size=batch_size, shuffle=False,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         self.trainloader = trainloader
@@ -99,9 +95,7 @@ class CIFARS1(object):
 
 
 class CIFARS2(object):
-    def __init__(self, batch_size, use_gpu, num_workers, tencrop=False):
-        pin_memory = True if use_gpu else False
-
+    def __init__(self, batch_size, tencrop=False):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),
@@ -112,7 +106,7 @@ class CIFARS2(object):
         trainset = ImageDataset('data/cifar-s2/train.txt', transform=train_transform)
         trainloader = torch.utils.data.DataLoader(
             trainset, batch_size=batch_size, shuffle=True,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         if tencrop:
@@ -133,13 +127,13 @@ class CIFARS2(object):
         testset = ImageDataset('data/cifar-s2/test.txt', transform=test_transform)
         testloader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         databaseset = ImageDataset('data/cifar-s2/database.txt', transform=test_transform)
         databaseloader = torch.utils.data.DataLoader(
             databaseset, batch_size=batch_size, shuffle=False,
-            num_workers=num_workers, pin_memory=pin_memory,
+            num_workers=4, pin_memory=True,
         )
 
         self.trainloader = trainloader
