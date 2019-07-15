@@ -64,7 +64,7 @@ def evaluate(model, databaseloder, testloader, R, tencrop, device):
                 feats = model(data.view(-1, c, h, w))
                 feats = feats.view(bs, ncrops, -1).mean(1)
             else:
-                feats = model(data)[0]
+                feats = model(data)
 
             db_feats.append(feats.data.cpu().numpy())
             db_labels.append(labels.data.cpu().numpy())
@@ -85,7 +85,7 @@ def evaluate(model, databaseloder, testloader, R, tencrop, device):
                 feats = model(data.view(-1, c, h, w))
                 feats = feats.view(bs, ncrops, -1).mean(1)
             else:
-                feats = model(data)[0]
+                feats = model(data)
 
             test_feats.append(feats.data.cpu().numpy())
             test_labels.append(labels.data.cpu().numpy())
