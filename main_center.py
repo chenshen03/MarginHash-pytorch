@@ -116,14 +116,15 @@ def main():
 
         if args.test_freq > 0 and (epoch+1) % args.test_freq == 0 or (epoch+1) == args.max_epoch:
             print("==> Test")
-            acc, err = test(net, classifier, testloader, dataset.num_classes, epoch, device)
+            acc, err = test(net, classifier, testloader, device)
             print("Accuracy (%): {}\t Error rate (%): {}".format(acc, err))
             if acc > best_acc:
                 best_acc = acc
 
         if args.eval_freq > 0 and (epoch+1) % args.eval_freq == 0 or (epoch+1) == args.max_epoch:
             print("==> Evaluate")
-            mAP_feat, mAP_sign, code_and_labels = evaluate(net, databaseloader, testloader, dataset.R, device)
+            mAP_feat, mAP_sign, code_and_labels = evaluate(net, databaseloader, testloader, \
+                                                dataset.R, dataset.num_classes, epoch, device)
             print(f'mAP_feat:{mAP_feat:.4f}  mAP_sign:{mAP_sign:.4f}')
             if mAP_sign > best_mAP_sign:
                 best_mAP_sign = mAP_sign
@@ -189,11 +190,9 @@ def train(net, classifier,
         plot_features(all_features, all_labels, num_classes, epoch, save_dir=args.save_dir, prefix='train')
 
 
-def test(net, classifier, testloader, num_classes, epoch, device):
+def test(net, classifier, testloader, device):
     net.eval()
     correct, total = 0, 0
-    if args.plot:
-        all_features, all_labels = [], []
 
     with torch.no_grad():
         for data, labels in testloader:
@@ -204,22 +203,13 @@ def test(net, classifier, testloader, num_classes, epoch, device):
             predictions = outputs.data.max(1)[1]
             total += labels.size(0)
             correct += (predictions == labels.data).sum()
-            
-            if args.plot:
-                all_features.append(features.data.cpu().numpy())
-                all_labels.append(labels.data.cpu().numpy())
-
-    if args.plot:
-        all_features = np.concatenate(all_features, 0)
-        all_labels = np.concatenate(all_labels, 0)
-        plot_features(all_features, all_labels, num_classes, epoch, save_dir=args.save_dir, prefix='test')
 
     acc = correct * 100. / total
     err = 100. - acc
     return acc, err
 
 
-def evaluate(net, databaseloader, testloader, R, device):
+def evaluate(net, databaseloader, testloader, R, num_classes, epoch, device):
     net.eval()
 
     print('calculate database codes...')
@@ -234,7 +224,7 @@ def evaluate(net, databaseloader, testloader, R, device):
     db_feats = np.concatenate(db_feats, 0)
     db_codes = sign(db_feats)
     db_labels = np.concatenate(db_labels, 0)
-    db_labels = np.eye(10)[db_labels]
+    db_labels_onehot = np.eye(10)[db_labels]
 
     print('calculate test codes...')
     test_feats = []
@@ -248,14 +238,18 @@ def evaluate(net, databaseloader, testloader, R, device):
     test_feats = np.concatenate(test_feats, 0)
     test_codes = sign(test_feats)
     test_labels = np.concatenate(test_labels, 0)
-    test_labels = np.eye(10)[test_labels]
+    test_labels_onehot = np.eye(10)[test_labels]
 
     print('calculate mAP...')
-    mAP_feat = get_mAP(db_feats, db_labels, test_feats, test_labels, R)
-    mAP_sign = get_mAP(db_codes, db_labels, test_codes, test_labels, R)
+    mAP_feat = get_mAP(db_feats, db_labels_onehot, test_feats, test_labels_onehot, R)
+    mAP_sign = get_mAP(db_codes, db_labels_onehot, test_codes, test_labels_onehot, R)
     
-    code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels,
-                       'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels}
+    code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels_onehot,
+                       'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels_onehot}
+    if args.plot:
+        plot_features(db_feats, db_labels, num_classes, epoch, save_dir=args.save_dir, prefix='database')
+        plot_features(test_feats, test_labels, num_classes, epoch, save_dir=args.save_dir, prefix='test')
+        
     return mAP_feat, mAP_sign, code_and_labels
 
 
