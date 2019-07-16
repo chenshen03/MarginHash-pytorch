@@ -1,4 +1,4 @@
-# pytorch-center-loss
+# Margin-Hash-PyTorch
 Pytorch implementation of Margin Hash for Image Retrieval.
 
 ## Get started
