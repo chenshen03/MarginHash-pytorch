@@ -15,7 +15,7 @@ parser = argparse.ArgumentParser("Hash Test")
 parser.add_argument('--dataset', type=str, default='cifar-s1')
 parser.add_argument('--batch-size', type=int, default=128)
 parser.add_argument('--gpus', type=str, default='0')
-parser.add_argument('--save-dir', type=str, default='./snapshot/Hash/cifar-s1/debug')
+parser.add_argument('--save-dir', type=str, default='./snapshot/cifar-s1/debug')
 parser.add_argument('--tencrop', action='store_true')
 
 args = parser.parse_args()

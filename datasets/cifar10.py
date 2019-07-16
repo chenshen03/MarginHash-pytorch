@@ -6,6 +6,11 @@ from torchvision import transforms
 from .datalist import ImageDataset
 
 
+# # https://github.com/kuangliu/pytorch-cifar/issues/8
+# cifar_normalize = transforms.Normalize(mean=[0.4914, 0.4822, 0.4465],
+#                                        std=[0.2023, 0.1994, 0.2010])
+#                                       #std=[0.2470, 0.2435, 0.2616])
+
 normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 
 class CIFAR(object):

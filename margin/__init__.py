@@ -3,6 +3,7 @@ from .MultiMarginProduct import MultiMarginProduct
 from .CosFace import CosineMarginProduct
 from .SphereFace import SphereProduct
 from .InnerProduct import InnerProduct
+from .Identity import Identity
 
 
 def create(name, feat_dim, num_classes, scale):
@@ -17,7 +18,7 @@ def create(name, feat_dim, num_classes, scale):
     elif name == 'Softmax':
         margin = InnerProduct(feat_dim, num_classes)
     elif name == 'Identity':
-        pass
+        margin = Identity()
     else:
         raise ValueError(f'margin {name} is not available!')
     return margin

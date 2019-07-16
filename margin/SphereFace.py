@@ -57,19 +57,19 @@ class SphereProduct(nn.Module):
             plt.show()
         """
 
-    def forward(self, input, label):
+    def forward(self, x, label):
         # lambda = max(lambda_min,base*(1+gamma*iteration)^(-power))
         self.iter += 1
         self.lamb = max(self.LambdaMin, self.base * (1 + self.gamma * self.iter) ** (-1 * self.power))
 
         # --------------------------- cos(theta) & phi(theta) ---------------------------
-        cos_theta = F.linear(F.normalize(input), F.normalize(self.weight))
+        cos_theta = F.linear(F.normalize(x), F.normalize(self.weight))
         cos_theta = cos_theta.clamp(-1, 1)
         cos_m_theta = self.mlambda[self.m](cos_theta)
         theta = cos_theta.data.acos()
         k = (self.m * theta / math.pi).floor()
         phi_theta = ((-1.0) ** k) * cos_m_theta - 2 * k
-        NormOfFeature = torch.norm(input, 2, 1)
+        NormOfFeature = torch.norm(x, 2, 1)
 
         # --------------------------- convert label to one-hot ---------------------------
         one_hot = torch.zeros(cos_theta.size())

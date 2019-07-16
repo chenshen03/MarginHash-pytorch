@@ -9,9 +9,11 @@ class InnerProduct(nn.Module):
         self.in_feature = in_feature
         self.out_feature = out_feature
         self.fc = torch.nn.Linear(in_feature, out_feature, bias=bias)
+        self.activation = nn.Tanh()
 
     def forward(self, x, label):
         # label not used
+        x = self.activation(x)
         output = self.fc(x)
         return output
 

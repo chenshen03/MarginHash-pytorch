@@ -4,8 +4,8 @@ import argparse
 import datetime
 import time
 import os.path as osp
-import random
 import numpy as np
+import random
 
 import torch
 import torch.nn as nn
@@ -24,6 +24,8 @@ parser.add_argument('--dataset', type=str, default='cifar-s1')
 # optimization
 parser.add_argument('--batch-size', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.001, help="learning rate for model")
+parser.add_argument('--lr-cent', type=float, default=0.5, help="learning rate for center loss")
+parser.add_argument('--weight-cent', type=float, default=0.01, help="weight for center loss")
 parser.add_argument('--max-epoch', type=int, default=200)
 parser.add_argument('--stepsize', type=int, default=50)
 parser.add_argument('--gamma', type=float, default=0.5, help="learning rate decay")
@@ -84,9 +86,11 @@ def main():
 
     # define optimizers for different layer
     criterion_xent = nn.CrossEntropyLoss()
+    criterion_cent = CenterLoss(num_classes=dataset.num_classes, feat_dim=args.feat_dim, device=device)
     optimizer_model = torch.optim.SGD([{'params': net.parameters()}, 
                                        {'params': classifier.parameters()}], 
                                         lr=args.lr, weight_decay=5e-04, momentum=0.9)
+    optimizer_centloss = torch.optim.SGD(criterion_cent.parameters(), lr=args.lr_cent)
 
     if args.stepsize > 0:
             scheduler = lr_scheduler.StepLR(optimizer_model, step_size=args.stepsize, gamma=args.gamma)
@@ -104,7 +108,8 @@ def main():
     for epoch in range(args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
         train(net, classifier,
-              criterion_xent, optimizer_model,
+              criterion_xent, criterion_cent,
+              optimizer_model, optimizer_centloss,
               trainloader, dataset.num_classes, epoch, device)
 
         if args.stepsize > 0: scheduler.step()
@@ -135,10 +140,12 @@ def main():
 
 
 def train(net, classifier, 
-          criterion_xent, optimizer_model,
+          criterion_xent, criterion_cent,
+          optimizer_model, optimizer_centloss,
           trainloader, num_classes, epoch, device):
     net.train()
     xent_losses = AverageMeter()
+    cent_losses = AverageMeter()
     losses = AverageMeter()
     
     if args.plot:
@@ -150,23 +157,31 @@ def train(net, classifier,
         features = net(data)
         outputs = classifier(features, labels)
         loss_xent = criterion_xent(outputs, labels)
+        loss_cent = criterion_cent(features, labels)
         loss_quan = quantization_loss(features)
-        loss = loss_xent + 0.0 * loss_quan
+        loss = loss_xent + args.weight_cent * loss_cent + 0.0 * loss_quan
         # compute gradient and do SGD step
         optimizer_model.zero_grad()
+        optimizer_centloss.zero_grad()
         loss.backward()
         optimizer_model.step()
+        # by doing so, weight_cent would not impact on the learning of centers
+        if args.weight_cent != 0:
+            for param in criterion_cent.parameters():
+                param.grad.data *= (1. / args.weight_cent)
+        optimizer_centloss.step()
         
         losses.update(loss.item(), labels.size(0))
         xent_losses.update(loss_xent.item(), labels.size(0))
+        cent_losses.update(loss_cent.item(), labels.size(0))
 
         if args.plot:
             all_features.append(features.data.cpu().numpy())
             all_labels.append(labels.data.cpu().numpy())
 
         if (batch_idx+1) % args.print_freq == 0:
-            print("Batch {}/{}\t Loss {:.6f} ({:.6f}) XentLoss {:.6f} ({:.6f})" \
-                  .format(batch_idx+1, len(trainloader), losses.val, losses.avg, xent_losses.val, xent_losses.avg))
+            print("Batch {}/{}\t Loss {:.6f} ({:.6f}) XentLoss {:.6f} ({:.6f}) CenterLoss {:.6f} ({:.6f})" \
+                  .format(batch_idx+1, len(trainloader), losses.val, losses.avg, xent_losses.val, xent_losses.avg, cent_losses.val, cent_losses.avg))
 
     if args.plot:
         all_features = np.concatenate(all_features, 0)

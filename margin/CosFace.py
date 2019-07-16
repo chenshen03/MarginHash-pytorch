@@ -25,8 +25,8 @@ class CosineMarginProduct(nn.Module):
         #stdv = 1. / math.sqrt(self.weight.size(1))
         #self.weight.data.uniform_(-stdv, stdv)
 
-    def forward(self, input, label):
-        cosine = F.linear(F.normalize(input), F.normalize(self.weight))
+    def forward(self, x, label):
+        cosine = F.linear(F.normalize(x), F.normalize(self.weight))
         # --------------------------- convert label to one-hot ---------------------------
         # https://discuss.pytorch.org/t/convert-int-into-one-hot-format/507
         one_hot = torch.zeros_like(cosine)
