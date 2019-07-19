@@ -12,10 +12,10 @@ from utils import *
 
 
 parser = argparse.ArgumentParser("Hash Test")
-parser.add_argument('--dataset', type=str, default='cifar-s1')
+parser.add_argument('--dataset', type=str, default='cifar_s1')
 parser.add_argument('--batch-size', type=int, default=128)
 parser.add_argument('--gpus', type=str, default='0')
-parser.add_argument('--save-dir', type=str, default='./snapshot/cifar-s1')
+parser.add_argument('--save-dir', type=str, default='./snapshot/cifar_s1')
 parser.add_argument('--prefix', type=str, default='debug')
 parser.add_argument('--tencrop', action='store_true')
 parser.add_argument('--plot', action='store_true')

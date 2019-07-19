@@ -20,7 +20,7 @@ from loss import *
 
 parser = argparse.ArgumentParser("Hash Train")
 # dataset
-parser.add_argument('--dataset', type=str, default='cifar-s1')
+parser.add_argument('--dataset', type=str, default='cifar_s1')
 # optimization
 parser.add_argument('--batch-size', type=int, default=128)
 parser.add_argument('--lr', type=float, default=0.001, help="learning rate for model")
@@ -38,7 +38,7 @@ parser.add_argument('--test-freq', type=int, default=1)
 parser.add_argument('--eval-freq', type=int, default=50)
 parser.add_argument('--gpus', type=str, default='0')
 parser.add_argument('--seed', type=int, default=1)
-parser.add_argument('--save-dir', type=str, default='snapshot/cifar-s1')
+parser.add_argument('--save-dir', type=str, default='snapshot/cifar_s1')
 parser.add_argument('--prefix', type=str, default='debug')
 parser.add_argument('--plot', action='store_true', help="whether to plot features for every epoch")
 
@@ -89,7 +89,7 @@ def main():
                                         lr=args.lr, weight_decay=5e-04, momentum=0.9)
 
     if args.stepsize > 0:
-            scheduler = lr_scheduler.StepLR(optimizer_model, step_size=args.stepsize, gamma=args.gamma)
+        scheduler = lr_scheduler.StepLR(optimizer_model, step_size=args.stepsize, gamma=args.gamma)
 
     if multi_gpus:
         net = nn.DataParallel(net).to(device)
@@ -146,7 +146,7 @@ def train(net, classifier,
         all_features, all_labels = [], []
 
     for batch_idx, (data, labels) in enumerate(trainloader):
-        data, labels = data.to(device), labels.to(device)
+        data, labels = data.to(device), labels.argmax(1).to(device)
         # compute output
         features = net(data)
         outputs = classifier(features, labels)
@@ -181,7 +181,7 @@ def test(net, classifier, testloader, device):
 
     with torch.no_grad():
         for data, labels in testloader:
-            data, labels = data.to(device), labels.to(device)
+            data, labels = data.to(device), labels.argmax(1).to(device)
             # compute output
             features = net(data)
             outputs = classifier(features, labels)
@@ -209,7 +209,6 @@ def evaluate(net, databaseloader, testloader, R, num_classes, epoch, device):
     db_feats = np.concatenate(db_feats, 0)
     db_codes = sign(db_feats)
     db_labels = np.concatenate(db_labels, 0)
-    db_labels_onehot = np.eye(10)[db_labels]
 
     print('calculate test codes...')
     test_feats = []
@@ -223,14 +222,13 @@ def evaluate(net, databaseloader, testloader, R, num_classes, epoch, device):
     test_feats = np.concatenate(test_feats, 0)
     test_codes = sign(test_feats)
     test_labels = np.concatenate(test_labels, 0)
-    test_labels_onehot = np.eye(10)[test_labels]
 
     print('calculate mAP...')
-    mAP_feat = get_mAP(db_feats, db_labels_onehot, test_feats, test_labels_onehot, R)
-    mAP_sign = get_mAP(db_codes, db_labels_onehot, test_codes, test_labels_onehot, R)
+    mAP_feat = get_mAP(db_feats, db_labels, test_feats, test_labels, R)
+    mAP_sign = get_mAP(db_codes, db_labels, test_codes, test_labels, R)
     
-    code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels_onehot,
-                       'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels_onehot}
+    code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels,
+                       'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels}
     if args.plot:
         plot_features(db_feats, db_labels, num_classes, epoch, save_dir=args.save_dir, prefix='database')
         plot_features(test_feats, test_labels, num_classes, epoch, save_dir=args.save_dir, prefix='test')

@@ -57,7 +57,7 @@ def contrastive_loss(output, label, margin=16):
     return loss
 
 
-def exp_loss(output, label, alpha, balanced=True):
+def exp_loss(output, label, alpha=1.0, balanced=False):
     '''exponential loss
     '''
     batch_size, bit = output.shape
@@ -66,11 +66,33 @@ def exp_loss(output, label, alpha, balanced=True):
     S =  torch.mm(label.float(), label.float().t())
     S_m = torch.masked_select(S, mask)
 
-    # sigmoid
+    ## sigmoid
     D = distance(output, dist_type='cosine')
     E = torch.log(1 + torch.exp(-alpha * (1-2*D)))
     E_m = torch.masked_select(E, mask)
-    loss_1 = S_m * E_m + (1 - S_m) * (E_m - torch.log((torch.exp(E_m) - 1).clamp(1e-6)))
+    loss_1 = 10 * S_m * E_m + (1 - S_m) * (E_m - torch.log((torch.exp(E_m) - 1).clamp(1e-6)))
+
+    ## hyper sigmoid
+    # alpha = 1
+    # belta = 10
+    # gamma = 1
+    # margin = 0
+    # D = gamma * distance(output, dist_type='cosine')
+    # E1 = torch.log(1 + torch.exp(-alpha * (1-2*D)))
+    # E1_m = torch.masked_select(E1, mask)
+    # loss_s1 = belta * S_m * E1_m
+    # E2 = torch.log(1 + torch.exp(-alpha * (1-2*(D-margin))))
+    # E2_m = torch.masked_select(E2, mask)
+    # loss_s0 = (1 - S_m) * (E2_m - torch.log((torch.exp(E2_m) - 1)).clamp(1e-6))
+    # loss_1 = loss_s1 + loss_s0
+
+    ## margin hash
+    # D = distance(output, dist_type='cosine')
+    # E1 = torch.exp(2* D) - 1
+    # E2 = torch.exp(2 * (1 - D)) - 1
+    # E1_m = torch.masked_select(E1, mask)
+    # E2_m = torch.masked_select(E2, mask)
+    # loss_1 = S_m * E1_m + (1 - S_m) * E2_m
 
     if balanced:
         S_all = batch_size * (batch_size - 1)
