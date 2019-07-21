@@ -193,8 +193,8 @@ def evaluate(net, databaseloader, testloader, R, num_classes, epoch, device):
     code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels,
                        'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels}
     if args.plot:
-        plot_features(db_feats, db_labels, num_classes, epoch, save_dir=args.save_dir, prefix='database')
-        plot_features(test_feats, test_labels, num_classes, epoch, save_dir=args.save_dir, prefix='test')
+        plot_features(db_feats, db_labels.argmax(1), num_classes, epoch, save_dir=args.save_dir, prefix='database')
+        plot_features(test_feats, test_labels.argmax(1), num_classes, epoch, save_dir=args.save_dir, prefix='test')
 
     return mAP_feat, mAP_sign, code_and_labels
 
