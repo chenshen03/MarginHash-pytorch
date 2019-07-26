@@ -18,7 +18,10 @@ class CenterLoss(nn.Module):
         self.num_classes = num_classes
         self.feat_dim = feat_dim
         self.device = device
-        self.centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim).to(self.device))
+        # self.centers = nn.Parameter(torch.randn(self.num_classes, self.feat_dim).to(self.device))
+        self.centers = nn.Parameter(torch.Tensor(self.num_classes, self.feat_dim).to(self.device))
+        nn.init.xavier_uniform_(self.centers)
+
 
     def forward(self, x, labels):
         """

@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import torchvision
@@ -52,7 +53,7 @@ class CIFAR(object):
 
 
 class CIFARS1(object):
-    def __init__(self, batch_size, tencrop=False):
+    def __init__(self, batch_size, bit=32, tencrop=False):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),
@@ -97,10 +98,12 @@ class CIFARS1(object):
         self.databaseloader = databaseloader
         self.num_classes = 10
         self.R = 54000
+        self.wordvec = torch.from_numpy(np.loadtxt('data/cifar_s1/wordvec.txt')).float().cuda()
+        self.hadamard = torch.from_numpy(np.loadtxt(f'data/cifar_s1/hadamard_{bit}.txt')).float().cuda()
 
 
 class CIFARS2(object):
-    def __init__(self, batch_size, tencrop=False):
+    def __init__(self, batch_size, bit, tencrop=False):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),
@@ -146,3 +149,5 @@ class CIFARS2(object):
         self.databaseloader = databaseloader
         self.num_classes = 10
         self.R = 50000
+        self.hadamard = torch.from_numpy(np.loadtxt(f'data/cifar_s1/hadamard_{bit}.txt')).float().cuda()
+

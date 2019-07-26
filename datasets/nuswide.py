@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from torch.utils.data import DataLoader
 import torchvision
@@ -10,7 +11,7 @@ normalize = transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 
 
 class NUSWIDE21(object):
-    def __init__(self, batch_size, tencrop=False):
+    def __init__(self, batch_size, bit=32, tencrop=False):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),
@@ -55,10 +56,12 @@ class NUSWIDE21(object):
         self.databaseloader = databaseloader
         self.num_classes = 21
         self.R = 5000
+        self.wordvec = torch.from_numpy(np.loadtxt('data/nuswide_21/wordvec.txt')).float().cuda()
+        self.hadamard = torch.from_numpy(np.loadtxt(f'data/nuswide_21/hadamard_32.txt')).float().cuda()
 
 
 class NUSWIDE81(object):
-    def __init__(self, batch_size, tencrop=False):
+    def __init__(self, batch_size, bit=32, tencrop=False):
         train_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.RandomCrop(224),

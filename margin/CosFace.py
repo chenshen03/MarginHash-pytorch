@@ -14,7 +14,7 @@ class CosineMarginProduct(nn.Module):
         m: margin
     """
 
-    def __init__(self, in_features, out_features, s=30.0, m=0.40):
+    def __init__(self, in_features, out_features, s=30.0, m=0.2):
         super(CosineMarginProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features

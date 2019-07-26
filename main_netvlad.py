@@ -17,6 +17,9 @@ import margin
 from utils import *
 from loss import *
 
+from backbone.netvlad import NetVLAD
+from backbone.netvlad import EmbedNet
+
 
 parser = argparse.ArgumentParser("Hash Train")
 # dataset
@@ -74,26 +77,28 @@ def main():
 
     print("Creating net: {}".format(args.backbone))
     net = backbone.create(name=args.backbone, feat_dim=args.feat_dim)
+    net_vlad = NetVLAD(num_clusters=dataset.num_classes, dim=args.feat_dim, alpha=1.0)
+    model = EmbedNet(net, net_vlad)
 
     # define optimizers for different layer
-    parameter_list = [{"params":net.feature_layers.parameters(), "lr":args.lr}, \
-                      {"params":net.hash_layer.parameters(), "lr":args.lr*10}]
-    optimizer_model = torch.optim.SGD(parameter_list, lr=args.lr, weight_decay=5e-04, momentum=0.9)
+    optimizer_model = torch.optim.SGD([{"params":model.parameters()}], lr=args.lr, weight_decay=5e-04, momentum=0.9)
 
     if args.stepsize > 0:
         scheduler = lr_scheduler.StepLR(optimizer_model, step_size=args.stepsize, gamma=args.gamma)
 
+    criterion = HardTripletLoss(margin=0.1, hardest=True).to(device)
+
     if multi_gpus:
-        net = nn.DataParallel(net).to(device)
+        model = nn.DataParallel(model).to(device)
     else:
-        net = net.to(device)
+        model = model.to(device)
 
     start_time = time.time()
 
     best_mAP_feat, best_mAP_sign= 0.0, 0.0
     for epoch in range(args.max_epoch):
         print("==> Epoch {}/{}".format(epoch+1, args.max_epoch))
-        train(net, optimizer_model, trainloader, dataset, epoch, device)
+        train(net, optimizer_model, criterion, trainloader, dataset.num_classes, epoch, device)
 
         if args.stepsize > 0: scheduler.step()
 
@@ -116,26 +121,22 @@ def main():
     print("Finished. Total elapsed time (h:m:s): {}".format(elapsed))
 
 
-def train(net, optimizer_model, trainloader, dataset, epoch, device):
+def train(net, optimizer_model, criterion, trainloader, num_classes, epoch, device):
     net.train()
-    losses = AverageMeter()
     s_losses = AverageMeter()
     q_losses = AverageMeter()
-    b_losses = AverageMeter()
-    i_losses = AverageMeter()
+    losses = AverageMeter()
     
     if args.plot:
         all_features, all_labels = [], []
 
     for batch_idx, (data, labels) in enumerate(trainloader):
-        data, labels = data.to(device), labels.to(device)
+        data, labels = data.to(device), labels.argmax(1).to(device)
         # compute output
         features = net(data)
-        s_loss = exp_loss(features, labels, wordvec=dataset.wordvec)
+        s_loss = criterion(features, labels)
         q_loss = quantization_loss(features)
-        b_loss = balance_loss(features)
-        i_loss = independence_loss(features)
-        loss = 1 * s_loss + 0 * q_loss + 0 * b_loss + 0 * i_loss
+        loss = s_loss + 0.0 * q_loss
         # compute gradient and do SGD step
         optimizer_model.zero_grad()
         loss.backward()
@@ -144,22 +145,20 @@ def train(net, optimizer_model, trainloader, dataset, epoch, device):
         losses.update(loss.item(), labels.size(0))
         s_losses.update(s_loss.item(), labels.size(0))
         q_losses.update(q_loss.item(), labels.size(0))
-        b_losses.update(b_loss.item(), labels.size(0))
-        i_losses.update(i_loss.item(), labels.size(0))
 
         if args.plot:
             all_features.append(features.data.cpu().numpy())
             all_labels.append(labels.data.cpu().numpy())
 
         if (batch_idx+1) % args.print_freq == 0:
-            print("Batch {}/{}  Loss {:.4f}({:.4f}) s_Loss {:.4f}({:.4f}) q_Loss {:.4f}({:.4f}) b_Loss {:.4f}({:.4f}) i_Loss {:.4f}({:.4f})" \
-                  .format(batch_idx+1, len(trainloader), losses.val, losses.avg, s_losses.val, s_losses.avg, \
-                        q_losses.val, q_losses.avg, b_losses.val, b_losses.avg, i_losses.val, i_losses.avg))
+            print("Batch {}/{}\t Loss {:.6f} ({:.6f}) s_Loss {:.6f} ({:.6f}) q_Loss {:.6f} ({:.6f})" \
+                  .format(batch_idx+1, len(trainloader), losses.val, losses.avg, \
+                        s_losses.val, s_losses.avg, q_losses.val, q_losses.avg))
 
     if args.plot:
         all_features = np.concatenate(all_features, 0)
         all_labels = np.concatenate(all_labels, 0)
-        plot_features(all_features, all_labels.argmax(1), dataset.num_classes, epoch, save_dir=args.save_dir, prefix='train')
+        plot_features(all_features, all_labels, num_classes, epoch, save_dir=args.save_dir, prefix='train')
 
 
 def evaluate(net, databaseloader, testloader, R, num_classes, epoch, device):

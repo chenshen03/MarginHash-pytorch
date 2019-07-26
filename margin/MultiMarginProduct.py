@@ -4,7 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 
 class MultiMarginProduct(nn.Module):
-    def __init__(self, in_feature=128, out_feature=10575, s=32.0, m1=0.20, m2=0.35, easy_margin=False):
+    def __init__(self, in_feature, out_feature, s=32.0, m1=0.20, m2=0.35, easy_margin=False):
         super(MultiMarginProduct, self).__init__()
         self.in_feature = in_feature
         self.out_feature = out_feature

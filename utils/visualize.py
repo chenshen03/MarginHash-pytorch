@@ -13,7 +13,7 @@ def plot_features(features, labels, num_classes, epoch, save_dir, prefix):
         labels: (num_instances). 
     """
     colors = ['C0', 'C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7', 'C8', 'C9']
-    for label_idx in range(num_classes):
+    for label_idx in range(10):
         plt.scatter(
             features[labels==label_idx, 0],
             features[labels==label_idx, 1],

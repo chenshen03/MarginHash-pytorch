@@ -110,7 +110,7 @@ def main():
         train(net, classifier,
               criterion_xent, criterion_cent,
               optimizer_model, optimizer_centloss,
-              trainloader, dataset.num_classes, epoch, device)
+              trainloader, dataset, epoch, device)
 
         if args.stepsize > 0: scheduler.step()
 
@@ -143,24 +143,28 @@ def main():
 def train(net, classifier, 
           criterion_xent, criterion_cent,
           optimizer_model, optimizer_centloss,
-          trainloader, num_classes, epoch, device):
+          trainloader, dataset, epoch, device):
     net.train()
+    losses = AverageMeter()
     xent_losses = AverageMeter()
     cent_losses = AverageMeter()
-    losses = AverageMeter()
+    s_losses = AverageMeter()
     
     if args.plot:
         all_features, all_labels = [], []
 
     for batch_idx, (data, labels) in enumerate(trainloader):
+        labels_onehot = labels.to(device)
         data, labels = data.to(device), labels.argmax(1).to(device)
         # compute output
         features = net(data)
         outputs = classifier(features, labels)
         loss_xent = criterion_xent(outputs, labels)
         loss_cent = criterion_cent(features, labels)
+        s_loss = hadamard_loss(features, labels_onehot, dataset.hadamard)
         loss_quan = quantization_loss(features)
-        loss = loss_xent + args.weight_cent * loss_cent + 0.0 * loss_quan
+
+        loss = loss_xent + args.weight_cent * loss_cent + 1 * s_loss + 0.0 * loss_quan
         # compute gradient and do SGD step
         optimizer_model.zero_grad()
         optimizer_centloss.zero_grad()
@@ -175,19 +179,21 @@ def train(net, classifier,
         losses.update(loss.item(), labels.size(0))
         xent_losses.update(loss_xent.item(), labels.size(0))
         cent_losses.update(loss_cent.item(), labels.size(0))
+        s_losses.update(loss_cent.item(), labels.size(0))
 
         if args.plot:
             all_features.append(features.data.cpu().numpy())
             all_labels.append(labels.data.cpu().numpy())
 
         if (batch_idx+1) % args.print_freq == 0:
-            print("Batch {}/{}\t Loss {:.6f} ({:.6f}) XentLoss {:.6f} ({:.6f}) CenterLoss {:.6f} ({:.6f})" \
-                  .format(batch_idx+1, len(trainloader), losses.val, losses.avg, xent_losses.val, xent_losses.avg, cent_losses.val, cent_losses.avg))
+            print("Batch {}/{}\t Loss {:.4f} ({:.4f}) c_loss {:.4f}({:.4f}) CenterLoss {:.4f}({:.4f}) s_loss {:.4f}({:.4f})" \
+                  .format(batch_idx+1, len(trainloader), losses.val, losses.avg, xent_losses.val, xent_losses.avg, \
+                            cent_losses.val, cent_losses.avg, s_losses.val, s_losses.avg))
 
     if args.plot:
         all_features = np.concatenate(all_features, 0)
         all_labels = np.concatenate(all_labels, 0)
-        plot_features(all_features, all_labels, num_classes, epoch, save_dir=args.save_dir, prefix='train')
+        plot_features(all_features, all_labels, dataset.num_classes, epoch, save_dir=args.save_dir, prefix='train')
 
 
 def test(net, classifier, testloader, device):

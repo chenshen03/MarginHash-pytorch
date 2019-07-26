@@ -26,6 +26,7 @@ print(args)
 
 
 def main():
+    sys.stdout = Logger(osp.join(args.save_dir, 'test.log'))
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
     multi_gpus = False
     if len(args.gpus.split(',')) > 1:
@@ -36,7 +37,7 @@ def main():
         cudnn.benchmark = True
 
     print("Creating dataset: {}".format(args.dataset))
-    dataset = datasets.CIFARS1(args.batch_size, tencrop=args.tencrop)
+    dataset = datasets.create(name=args.dataset, batch_size=args.batch_size, bit=32, tencrop=args.tencrop)
     testloader, databaseloader = dataset.testloader, dataset.databaseloader
 
     model_path = osp.join(args.save_dir, 'model_best.pth')
@@ -48,8 +49,9 @@ def main():
         model = model.to(device)
 
     print("==> Evaluate")
-    mAP_feat, mAP_sign, _ = evaluate(model, databaseloader, testloader, dataset.R, args.tencrop, device)
-    print(f'mAP_feat:{mAP_feat:.4f}  mAP_sign:{mAP_sign:.4f}')
+    mAP_feat, mAP_sign, mAP_topK, code_and_labels = evaluate(model, databaseloader, testloader, dataset.R, args.tencrop, device)
+    np.save(osp.join(args.save_dir, 'code_and_label.npy'), code_and_labels)
+    print(f'mAP_feat:{mAP_feat:.4f}  mAP_sign:{mAP_sign:.4f}  mAP_top1000:{mAP_topK:.4f}')
 
 
 def evaluate(model, databaseloader, testloader, R, tencrop, device):
@@ -74,7 +76,6 @@ def evaluate(model, databaseloader, testloader, R, tencrop, device):
     db_feats = np.concatenate(db_feats, 0)
     db_codes = sign(db_feats)
     db_labels = np.concatenate(db_labels, 0)
-    db_labels_onehot = np.eye(10)[db_labels]
 
     print('calculate test codes...')
     test_feats = []
@@ -95,19 +96,19 @@ def evaluate(model, databaseloader, testloader, R, tencrop, device):
     test_feats = np.concatenate(test_feats, 0)
     test_codes = sign(test_feats)
     test_labels = np.concatenate(test_labels, 0)
-    test_labels_onehot = np.eye(10)[test_labels]
 
     print('calculate mAP...')
-    mAP_feat = get_mAP(db_feats, db_labels_onehot, test_feats, test_labels_onehot, R)
-    mAP_sign = get_mAP(db_codes, db_labels_onehot, test_codes, test_labels_onehot, R)
+    mAP_feat = get_mAP(db_feats, db_labels, test_feats, test_labels, R)
+    mAP_sign = get_mAP(db_codes, db_labels, test_codes, test_labels, R)
+    mAP_topK = get_mAP(db_codes, db_labels, test_codes, test_labels, R=1000)
     
-    code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels_onehot,
-                       'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels_onehot}
+    code_and_labels = {'db_feats':db_feats, 'db_codes':db_codes, 'db_labels':db_labels,
+                       'test_feats': test_feats, 'test_codes':test_codes, 'test_labels':test_labels}
     if args.plot:
-        plot_features(db_feats, db_labels.argmax(1), num_classes, epoch, save_dir=args.save_dir, prefix='database')
-        plot_features(test_feats, test_labels.argmax(1), num_classes, epoch, save_dir=args.save_dir, prefix='test')
+        plot_features(db_feats, db_labels.argmax(1), num_classes=10, epoch=1, save_dir=args.save_dir, prefix='database')
+        plot_features(test_feats, test_labels.argmax(1), num_classes=10, epoch=1, save_dir=args.save_dir, prefix='test')
 
-    return mAP_feat, mAP_sign, code_and_labels
+    return mAP_feat, mAP_sign, mAP_topK, code_and_labels
 
 
 if __name__ == "__main__":
