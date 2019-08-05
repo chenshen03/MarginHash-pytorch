@@ -28,7 +28,19 @@ def pairwise_loss(output, label, alpha=10.0, class_num=5.0, l_threshold=15.0):
     return loss / (torch.sum(mask_positive.float()) * class_num + torch.sum(mask_negative.float()))
 
 
-def contrastive_loss(output, label, margin=16):
+def pairwise_loss_2(output, label, alpha=5.0):
+    batch_size, bits = output.shape
+    mask = (torch.eye(batch_size) == 0).to(torch.device("cuda"))
+    S =  torch.mm(label.float(), label.float().t())
+    S_m = torch.masked_select(S, mask)
+    ip = alpha * torch.mm(output, output.t()) / bits
+    ip_m = torch.masked_select(ip, mask)
+    loss_1  = - (S_m * ip_m - torch.log(1 + torch.exp(ip_m)))
+    loss = loss_1.mean()
+    return loss
+
+
+def contrastive_loss(output, label, margin=2):
     '''contrastive loss
     - Deep Supervised Hashing for Fast Image Retrieval
     '''
@@ -127,12 +139,6 @@ def exp_loss(output, label, wordvec=None, alpha=5.0, balanced=False):
     return loss
 
 
-weights = torch.tensor([0.50857143, 0.61952381, 0.89038095, 0.70780952, 0.89171429,
-                        0.85942857, 0.89714286, 0.9067619 , 0.8847619 , 0.85714286,
-                        0.87914286, 0.9187619 , 0.92685714, 0.90457143, 0.904     ,
-                        0.91561905, 0.92561905, 0.9272381 , 0.92457143, 0.91742857,
-                        0.90780952]).cuda()
-
 def hadamard_loss(output, label, hadamard):
     def rand_num():
         r = torch.round(torch.rand(1))
@@ -153,8 +159,11 @@ def hadamard_loss(output, label, hadamard):
     return loss.mean()
 
 
-def quantization_loss(output):
-    loss = torch.mean((torch.abs(output) - 1) ** 2)
+def quantization_loss(output, square=True):
+    if square:
+        loss = torch.mean((torch.abs(output) - 1) ** 2)
+    else:
+        loss = torch.mean(torch.abs((torch.abs(output) - 1)))
     return loss
 
 

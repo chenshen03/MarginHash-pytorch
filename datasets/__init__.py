@@ -1,6 +1,7 @@
 from .mnist import MNIST
 from .cifar10 import CIFAR, CIFARS1, CIFARS2
-from .nuswide import *
+from .nuswide import NUSWIDE21, NUSWIDE81
+from .imagenet import ImageNet
 
 
 def create(name, batch_size, bit=32, tencrop=False):
@@ -16,6 +17,8 @@ def create(name, batch_size, bit=32, tencrop=False):
         dataset = NUSWIDE21(batch_size, bit, tencrop)
     elif name == 'nuswide_81':
         dataset = NUSWIDE81(batch_size, bit, tencrop)
+    elif name == 'imagenet':
+        dataset = ImageNet(batch_size, bit, tencrop)
     else:
         raise ValueError(f'dataset {name} is not available!')
     return dataset

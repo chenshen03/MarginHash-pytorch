@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
+import os.path as osp
 
 
 def make_dataset(data_path, taget):
@@ -20,10 +21,11 @@ def make_dataset(data_path, taget):
 class ImageDataset(Dataset):
     """Image Dataset"""
 
-    def __init__(self, data_path, target=None, transform=None, target_transform=None):
+    def __init__(self, data_path, target=None, transform=None, target_transform=None, root_path=None):
         self.dataset = make_dataset(data_path, target)
         self.transform = transform
         self.target_transform = target_transform
+        self.root_path = root_path
 
     def __getitem__(self, index):
         """
@@ -33,7 +35,10 @@ class ImageDataset(Dataset):
             tuple: (image, target) where target is class_index of the target class.
         """
         path, target = self.dataset[index]
-        image = Image.open(path).convert('RGB')
+        if self.root_path != None:
+            image = Image.open(osp.join(self.root_path, path)).convert('RGB')
+        else:
+            image = Image.open(path).convert('RGB')
 
         if self.transform is not None:
             image = self.transform(image)

@@ -5,6 +5,7 @@ import torchvision
 from torchvision import transforms
 
 from .datalist import ImageDataset
+from utils import generate_hadamard_codebook
 
 
 # # https://github.com/kuangliu/pytorch-cifar/issues/8
@@ -99,7 +100,6 @@ class CIFARS1(object):
         self.num_classes = 10
         self.R = 54000
         self.wordvec = torch.from_numpy(np.loadtxt('data/cifar_s1/wordvec.txt')).float().cuda()
-        self.hadamard = torch.from_numpy(np.loadtxt(f'data/cifar_s1/hadamard_{bit}.txt')).float().cuda()
 
 
 class CIFARS2(object):
@@ -149,5 +149,3 @@ class CIFARS2(object):
         self.databaseloader = databaseloader
         self.num_classes = 10
         self.R = 50000
-        self.hadamard = torch.from_numpy(np.loadtxt(f'data/cifar_s1/hadamard_{bit}.txt')).float().cuda()
-

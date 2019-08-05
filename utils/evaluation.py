@@ -1,4 +1,6 @@
+import os
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.special import comb
 from .distance import distance
 
@@ -51,3 +53,42 @@ def get_RAMAP(db_output, db_labels, q_output, q_labels, cost=False):
         RAAP = RAAP / (R + 1)
         RAAPs.append(RAAP)
     return np.mean(RAAPs)
+
+
+def get_precision_top(db_codes, db_labels, test_codes, test_labels, k=500):
+    dist = distance(test_codes, db_codes, dist_type='hamming', pair=False)
+    index = np.argsort(dist, axis=1)
+    q_num = len(test_codes)
+    precision = 0
+    for i in range(q_num):
+        precision += (np.sum(db_labels[index[i][:k]] == test_labels[i]) / k)
+    precision /= q_num
+    return precision
+
+
+def get_pre_recall(q_feats, q_labels, db_feats, db_labels):
+    eps = 1e-6
+    dist = distance(q_feats, db_feats, dist_type='hamming', pair=False)
+    S = np.matmul(q_labels, db_labels.transpose())
+    S[S==-1] = 0
+    total_good_pairs = np.sum(S)
+    max_hamming = int(np.maximum(np.max(dist), 3))
+    precision = np.zeros(max_hamming+1)
+    recall = np.zeros(max_hamming+1)
+    for i in range(max_hamming+1):
+        index = dist <= (i + eps)
+        retrieved_good_pairs = np.sum(S[index])
+        retrieved_pairs = np.sum(index)
+        precision[i] = retrieved_good_pairs / (retrieved_pairs + eps)
+        recall[i] = retrieved_good_pairs / total_good_pairs
+    return precision, recall
+
+
+def save_pre_recall(precision, recall, path):
+    plt.figure()
+    plt.plot(precision, recall)
+    plt.title('Precision with Recall Curve')
+    plt.ylabel('precision')
+    plt.xlabel('recall')
+    plt.savefig(os.path.join(path, 'pre_recall_curve.jpg'))
+    np.save(os.path.join(path, 'pre_recall.npy'), {'precision':precision, 'recall':recall})

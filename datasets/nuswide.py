@@ -57,7 +57,6 @@ class NUSWIDE21(object):
         self.num_classes = 21
         self.R = 5000
         self.wordvec = torch.from_numpy(np.loadtxt('data/nuswide_21/wordvec.txt')).float().cuda()
-        self.hadamard = torch.from_numpy(np.loadtxt(f'data/nuswide_21/hadamard_32.txt')).float().cuda()
 
 
 class NUSWIDE81(object):

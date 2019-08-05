@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 import math
+import numpy as np
 
 
 # ArcFace
@@ -17,12 +18,12 @@ class ArcMarginProduct(nn.Module):
             cos(theta + m)
         """
 
-    def __init__(self, in_features, out_features, s=30.0, m=0.50, easy_margin=True):
+    def __init__(self, in_features, out_features, s=10.0, m=0.4, easy_margin=True):
         super(ArcMarginProduct, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.s = 10
-        self.m = 0.5
+        self.s = s
+        self.m = m
         # Parameter 的用途：
         # 将一个不可训练的类型Tensor转换成可以训练的类型parameter
         # 并将这个parameter绑定到这个module里面

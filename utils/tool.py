@@ -5,6 +5,7 @@ import shutil
 import os.path as osp
 import numpy as np
 import torch
+from scipy.linalg import hadamard
 
 
 def mkdir_if_missing(directory):
@@ -86,3 +87,66 @@ def sign(x):
     tmp = s[s == 0]
     s[s==0] = np.random.choice([-1, 1], tmp.shape)
     return s
+
+
+class data_prefetcher():
+    def __init__(self, loader):
+        self.loader = iter(loader)
+        # self.stream = torch.cuda.Stream()
+        self.preload()
+
+    def preload(self):
+        try:
+            self.data = next(self.loader)
+        except StopIteration:
+            self.next_input = None
+            return
+        # with torch.cuda.stream(self.stream):
+        #     self.next_data = self.next_data.cuda(non_blocking=True)
+            
+    def next(self):
+        # torch.cuda.current_stream().wait_stream(self.stream)
+        data = self.data
+        self.preload()
+        return data
+
+    
+def generate_hadamard_codebook(bit, num_classes):
+    
+    def balance_loss(H):
+        H_mean = np.mean(H, axis=0)
+        loss = np.mean(H_mean ** 2)
+        return loss
+
+    def independence_loss(H):
+        batch_size, bit = H.shape
+        I = np.eye(batch_size)
+        loss = np.mean(((H @ H.transpose()) / bit - I) ** 2)
+        return loss
+    
+    if bit < num_classes:
+        for i in [16, 32, 64, 128, 256]:
+            if i > num_classes: num_hadamard = i; break
+    else:
+        num_hadamard = bit
+    if num_hadamard == 48:
+        HC_origin = np.loadtxt('../data/hadamard_codebook/hadamard_48bit.txt')
+    else:
+        HC_origin = hadamard(num_hadamard)
+    
+    bl_min = 10000
+    hadamard_codebook = None
+    for i in range(10000):
+        if bit < num_classes:
+            lshW = np.random.randn(num_hadamard, bit)
+            # lshW = lshW / np.tile(np.diag(np.sqrt(lshW.transpose() @ lshW)), (num_hadamard, 1))
+            HC = np.sign(HC_origin @ lshW)
+        else:
+            HC = HC_origin
+        HC = HC[np.random.permutation(num_hadamard), :]
+        HC_tmp = HC[:num_classes, :]
+        bl = balance_loss(HC_tmp)
+        if bl < bl_min:
+            bl_min = bl
+            hadamard_codebook = HC_tmp
+    return hadamard_codebook
