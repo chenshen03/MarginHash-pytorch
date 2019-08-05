@@ -140,12 +140,12 @@ def main():
             print('calculate metrics...')
             mAP_feat = get_mAP(code_and_labels['db_feats'], code_and_labels['db_labels'], 
                             code_and_labels['test_feats'], code_and_labels['test_labels'], dataset.R)
-            mAP_sign = get_mAP(code_and_labels['db_feats'], code_and_labels['db_labels'], 
-                            code_and_labels['test_feats'], code_and_labels['test_labels'], dataset.R)
-            pre_topK = get_precision_top(code_and_labels['db_feats'], code_and_labels['db_labels'].argmax(1), 
-                            code_and_labels['test_feats'], code_and_labels['test_labels'].argmax(1), k=500)
-            precision, recall = get_pre_recall(code_and_labels['db_feats'], code_and_labels['db_labels'], 
-                            code_and_labels['test_feats'], code_and_labels['test_labels'])
+            mAP_sign = get_mAP(code_and_labels['db_codes'], code_and_labels['db_labels'], 
+                            code_and_labels['test_codes'], code_and_labels['test_labels'], dataset.R)
+            pre_topK = get_precision_top(code_and_labels['db_codes'], code_and_labels['db_labels'].argmax(1), 
+                            code_and_labels['test_codes'], code_and_labels['test_labels'].argmax(1), k=500)
+            precision, recall = get_pre_recall(code_and_labels['db_codes'], code_and_labels['db_labels'], 
+                            code_and_labels['test_codes'], code_and_labels['test_labels'])
 
             print(f'mAP_feat:{mAP_feat:.4f}  mAP_sign:{mAP_sign:.4f}  precision_top500:{pre_topK:.4f}')
             if mAP_sign > best_mAP_sign:
